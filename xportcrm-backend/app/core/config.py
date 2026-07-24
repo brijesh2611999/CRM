@@ -1,4 +1,3 @@
- # Settings (env vars)
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -6,6 +5,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     DATABASE_URL_SYNC: str
     SECRET_KEY: str
+    AZURE_STORAGE_CONNECTION_STRING: str
+    AZURE_STORAGE_CONTAINER_NAME: str
 
     class Config:
         env_file = ".env"

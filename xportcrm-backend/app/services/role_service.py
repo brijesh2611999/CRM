@@ -9,6 +9,8 @@ from app.models.role import Role
 from app.models.permission import Permission
 from app.models.user import User
 from app.schemas.role import RoleCreate, RoleUpdate, PermissionItem
+from app.models.field_permission import FieldPermission
+from app.schemas.role import FieldPermissionItem
 
 
 def _generate_role_code(name: str) -> str:
@@ -157,3 +159,36 @@ async def assign_user_to_role(db: AsyncSession, tenant_id: uuid.UUID, user_id: u
     await db.commit()
     await db.refresh(user)
     return user
+
+
+async def set_field_permissions(
+    db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID, field_permissions: list[FieldPermissionItem]
+) -> list[FieldPermission]:
+    role = await get_role(db, tenant_id, role_id)
+    if role is None:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    for item in field_permissions:
+        result = await db.execute(
+            select(FieldPermission).where(
+                FieldPermission.tenant_id == tenant_id,
+                FieldPermission.role_id == role_id,
+                FieldPermission.module == item.module,
+                FieldPermission.field_name == item.field_name,
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            existing.visibility = item.visibility
+        else:
+            db.add(FieldPermission(
+                tenant_id=tenant_id, role_id=role_id, module=item.module,
+                field_name=item.field_name, visibility=item.visibility,
+            ))
+
+    await db.commit()
+
+    result = await db.execute(
+        select(FieldPermission).where(FieldPermission.tenant_id == tenant_id, FieldPermission.role_id == role_id)
+    )
+    return result.scalars().all()

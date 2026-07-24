@@ -8,6 +8,7 @@ from app.schemas.contact import ContactCreate, ContactUpdate, ContactRead
 from app.services import contact_service
 from app.schemas.common import PaginatedResponse
 from app.services.export_service import export_to_csv, export_to_excel, serialize_for_export
+from app.api.deps import get_current_tenant_id, get_current_user_id, require_permission
 
 
 router = APIRouter()
@@ -57,12 +58,21 @@ async def list_contacts(
     return PaginatedResponse(total=total, page=page, page_size=page_size, items=items)
 
 
+# @router.post("/", response_model=ContactRead, status_code=201)
+# async def create_contact(
+#     data: ContactCreate,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     return await contact_service.create_contact(db, tenant_id, user_id, data)
 @router.post("/", response_model=ContactRead, status_code=201)
 async def create_contact(
     data: ContactCreate,
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("contacts", "create")),
 ):
     return await contact_service.create_contact(db, tenant_id, user_id, data)
 
@@ -79,6 +89,18 @@ async def get_contact(
     return contact
 
 
+# @router.put("/{contact_id}", response_model=ContactRead)
+# async def update_contact(
+#     contact_id: uuid.UUID,
+#     data: ContactUpdate,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     contact = await contact_service.update_contact(db, tenant_id, user_id, contact_id, data)
+#     if contact is None:
+#         raise HTTPException(status_code=404, detail="Contact not found")
+#     return contact
 @router.put("/{contact_id}", response_model=ContactRead)
 async def update_contact(
     contact_id: uuid.UUID,
@@ -86,6 +108,7 @@ async def update_contact(
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("contacts", "update")),
 ):
     contact = await contact_service.update_contact(db, tenant_id, user_id, contact_id, data)
     if contact is None:
@@ -93,15 +116,28 @@ async def update_contact(
     return contact
 
 
+
+# @router.delete("/{contact_id}", response_model=ContactRead)
+# async def delete_contact(
+#     contact_id: uuid.UUID,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     contact = await contact_service.delete_contact(db, tenant_id, user_id, contact_id)
+#     if contact is None:
+#         raise HTTPException(status_code=404, detail="Contact not found")
+#     return contact
+
 @router.delete("/{contact_id}", response_model=ContactRead)
 async def delete_contact(
     contact_id: uuid.UUID,
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("contacts", "delete")),
 ):
     contact = await contact_service.delete_contact(db, tenant_id, user_id, contact_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     return contact
-

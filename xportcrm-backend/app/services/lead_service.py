@@ -10,6 +10,7 @@ from app.schemas.lead import LeadCreate, LeadUpdate
 from sqlalchemy import select, func  # for pagination and search filter
 from app.models.opportunity import Opportunity
 from app.schemas.lead import ConvertToOpportunityRequest
+from app.services.notification_service import create_notification
 
 # without pagination 
 # async def list_leads(db: AsyncSession, tenant_id: uuid.UUID) -> list[Lead]:
@@ -135,17 +136,41 @@ async def create_lead(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID
     return lead, is_duplicate
 
 
+# async def update_lead(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, lead_id: uuid.UUID, data: LeadUpdate) -> Lead | None:
+#     lead = await get_lead(db, tenant_id, lead_id)
+#     if lead is None:
+#         return None
+#     for field, value in data.model_dump(exclude_unset=True).items():
+#         setattr(lead, field, value)
+#     lead.modified_by = user_id
+#     await db.commit()
+#     await db.refresh(lead)
+#     return lead
 async def update_lead(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, lead_id: uuid.UUID, data: LeadUpdate) -> Lead | None:
     lead = await get_lead(db, tenant_id, lead_id)
     if lead is None:
         return None
-    for field, value in data.model_dump(exclude_unset=True).items():
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    # XPO-44 section 14: Assignment Notification
+    new_assignee = update_data.get("assigned_to_id")
+    if new_assignee and new_assignee != lead.assigned_to_id:
+        await create_notification(
+            db, tenant_id, new_assignee,
+            title=f"Lead assigned to you: {lead.company_name}",
+            notification_type="lead_assigned",
+            related_to="Lead",
+            related_record_id=lead.id,
+        )
+
+    for field, value in update_data.items():
         setattr(lead, field, value)
     lead.modified_by = user_id
+
     await db.commit()
     await db.refresh(lead)
     return lead
-
 
 async def delete_lead(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, lead_id: uuid.UUID) -> Lead | None:
     lead = await get_lead(db, tenant_id, lead_id)

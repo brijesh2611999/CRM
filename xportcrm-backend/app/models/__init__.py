@@ -25,3 +25,7 @@ from app.models.industry_type import IndustryType                   # noqa: F401
 from app.models.document_type import DocumentType                   # noqa: F401
 from app.models.quote_tnc_template import QuoteTncTemplate           # noqa: F401
 from app.models.permission import Permission  # noqa: F401
+from app.models.super_admin import SuperAdmin  # noqa: F401
+from app.models.notification import Notification  # noqa: F401
+from app.models.document import Document  # noqa: F401
+from app.models.field_permission import FieldPermission  # noqa: F401

@@ -44,3 +44,13 @@ class SetPermissionsRequest(BaseModel):
 class AssignUserRoleRequest(BaseModel):
     user_id: uuid.UUID
     role_id: uuid.UUID
+
+
+class FieldPermissionItem(BaseModel):
+    module: str
+    field_name: str
+    visibility: str  # Hidden / ReadOnly / Editable
+
+
+class SetFieldPermissionsRequest(BaseModel):
+    field_permissions: list[FieldPermissionItem]

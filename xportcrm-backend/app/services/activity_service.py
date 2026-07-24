@@ -11,6 +11,7 @@ from app.models.account import Account
 from app.models.opportunity import Opportunity
 from app.models.quotation import Quotation
 from app.schemas.activity import ActivityCreate, ActivityUpdate
+from app.services.notification_service import create_notification
 
 RELATED_TO_MODELS = {
     "Lead": Lead,
@@ -48,15 +49,33 @@ async def get_activity(db: AsyncSession, tenant_id: uuid.UUID, activity_id: uuid
     return result.scalar_one_or_none()
 
 
+# async def create_activity(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, data: ActivityCreate) -> Activity:
+#     await _validate_related_record(db, tenant_id, data.related_to, data.related_record_id)
+
+#     activity = Activity(tenant_id=tenant_id, created_by=user_id, **data.model_dump())
+#     db.add(activity)
+#     await db.commit()
+#     await db.refresh(activity)
+#     return activity
 async def create_activity(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, data: ActivityCreate) -> Activity:
     await _validate_related_record(db, tenant_id, data.related_to, data.related_record_id)
 
     activity = Activity(tenant_id=tenant_id, created_by=user_id, **data.model_dump())
     db.add(activity)
+    await db.flush()
+
+    # XPO-48 section 17: New Activity Assigned notification
+    await create_notification(
+        db, tenant_id, activity.assigned_to_id,
+        title=f"New activity assigned: {activity.subject}",
+        notification_type="activity_assigned",
+        related_to=activity.related_to,
+        related_record_id=activity.related_record_id,
+    )
+
     await db.commit()
     await db.refresh(activity)
     return activity
-
 
 async def update_activity(
     db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, activity_id: uuid.UUID, data: ActivityUpdate

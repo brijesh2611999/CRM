@@ -11,6 +11,8 @@ from app.services.export_service import export_to_csv, export_to_excel, serializ
 from app.schemas.common import BulkAssignRequest, BulkStatusChangeRequest, BulkIdsRequest, BulkActionResult
 from app.api.deps import get_current_tenant_id, get_current_user_id, get_current_user
 from app.schemas.auth import CurrentUser
+from app.api.deps import get_current_tenant_id, get_current_user_id, get_current_user, require_permission
+
 
 router = APIRouter()
 
@@ -97,12 +99,21 @@ async def list_opportunities(
     return PaginatedResponse(total=total, page=page, page_size=page_size, items=items)
 
 
+# @router.post("/", response_model=OpportunityRead, status_code=201)
+# async def create_opportunity(
+#     data: OpportunityCreate,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     return await opportunity_service.create_opportunity(db, tenant_id, user_id, data)
 @router.post("/", response_model=OpportunityRead, status_code=201)
 async def create_opportunity(
     data: OpportunityCreate,
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("opportunities", "create")),
 ):
     return await opportunity_service.create_opportunity(db, tenant_id, user_id, data)
 
@@ -119,6 +130,18 @@ async def get_opportunity(
     return opportunity
 
 
+# @router.put("/{opportunity_id}", response_model=OpportunityRead)
+# async def update_opportunity(
+#     opportunity_id: uuid.UUID,
+#     data: OpportunityUpdate,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     opportunity = await opportunity_service.update_opportunity(db, tenant_id, user_id, opportunity_id, data)
+#     if opportunity is None:
+#         raise HTTPException(status_code=404, detail="Opportunity not found")
+#     return opportunity
 @router.put("/{opportunity_id}", response_model=OpportunityRead)
 async def update_opportunity(
     opportunity_id: uuid.UUID,
@@ -126,6 +149,7 @@ async def update_opportunity(
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("opportunities", "update")),
 ):
     opportunity = await opportunity_service.update_opportunity(db, tenant_id, user_id, opportunity_id, data)
     if opportunity is None:
@@ -133,18 +157,29 @@ async def update_opportunity(
     return opportunity
 
 
+# @router.delete("/{opportunity_id}", response_model=OpportunityRead)
+# async def delete_opportunity(
+#     opportunity_id: uuid.UUID,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     opportunity = await opportunity_service.delete_opportunity(db, tenant_id, user_id, opportunity_id)
+#     if opportunity is None:
+#         raise HTTPException(status_code=404, detail="Opportunity not found")
+#     return opportunity
 @router.delete("/{opportunity_id}", response_model=OpportunityRead)
 async def delete_opportunity(
     opportunity_id: uuid.UUID,
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("opportunities", "delete")),
 ):
     opportunity = await opportunity_service.delete_opportunity(db, tenant_id, user_id, opportunity_id)
     if opportunity is None:
         raise HTTPException(status_code=404, detail="Opportunity not found")
     return opportunity
-
 
 
 @router.post("/bulk/assign", response_model=BulkActionResult)

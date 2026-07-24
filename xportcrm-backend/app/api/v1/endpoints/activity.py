@@ -6,6 +6,8 @@ from app.api.deps import get_current_tenant_id, get_current_user_id
 from app.db.session import get_db
 from app.schemas.activity import ActivityCreate, ActivityUpdate, ActivityRead
 from app.services import activity_service
+from app.api.deps import get_current_tenant_id, get_current_user_id, require_permission
+
 
 router = APIRouter()
 
@@ -18,12 +20,21 @@ async def list_activities(
     return await activity_service.list_activities(db, tenant_id)
 
 
+# @router.post("/", response_model=ActivityRead, status_code=201)
+# async def create_activity(
+#     data: ActivityCreate,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     return await activity_service.create_activity(db, tenant_id, user_id, data)
 @router.post("/", response_model=ActivityRead, status_code=201)
 async def create_activity(
     data: ActivityCreate,
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("activities", "create")),
 ):
     return await activity_service.create_activity(db, tenant_id, user_id, data)
 
@@ -40,6 +51,18 @@ async def get_activity(
     return activity
 
 
+# @router.put("/{activity_id}", response_model=ActivityRead)
+# async def update_activity(
+#     activity_id: uuid.UUID,
+#     data: ActivityUpdate,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     activity = await activity_service.update_activity(db, tenant_id, user_id, activity_id, data)
+#     if activity is None:
+#         raise HTTPException(status_code=404, detail="Activity not found")
+#     return activity
 @router.put("/{activity_id}", response_model=ActivityRead)
 async def update_activity(
     activity_id: uuid.UUID,
@@ -47,6 +70,7 @@ async def update_activity(
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("activities", "update")),
 ):
     activity = await activity_service.update_activity(db, tenant_id, user_id, activity_id, data)
     if activity is None:
@@ -54,12 +78,24 @@ async def update_activity(
     return activity
 
 
+# @router.delete("/{activity_id}", response_model=ActivityRead)
+# async def delete_activity(
+#     activity_id: uuid.UUID,
+#     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+#     user_id: uuid.UUID = Depends(get_current_user_id),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     activity = await activity_service.delete_activity(db, tenant_id, user_id, activity_id)
+#     if activity is None:
+#         raise HTTPException(status_code=404, detail="Activity not found")
+#     return activity
 @router.delete("/{activity_id}", response_model=ActivityRead)
 async def delete_activity(
     activity_id: uuid.UUID,
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
     user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    _current_user = Depends(require_permission("activities", "delete")),
 ):
     activity = await activity_service.delete_activity(db, tenant_id, user_id, activity_id)
     if activity is None:

@@ -34,3 +34,13 @@ def create_access_token(data: dict) -> str:
 
 def decode_access_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+
+def create_super_admin_token(data: dict) -> str:
+    """Same JWT mechanism as tenant users, but with a distinct 'scope'
+    claim so tenant-scoped endpoints can never accept a Super Admin
+    token by mistake, and vice versa."""
+    to_encode = data.copy()
+    to_encode["scope"] = "super_admin"
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)

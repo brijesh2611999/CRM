@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.opportunity import Opportunity
 from app.schemas.opportunity import OpportunityCreate, OpportunityUpdate, STAGE_PROBABILITY_MAP
 from sqlalchemy import select, func
+from app.services.notification_service import create_notification
 
 
 # async def list_opportunities(db: AsyncSession, tenant_id: uuid.UUID) -> list[Opportunity]:
@@ -112,6 +113,25 @@ async def create_opportunity(db: AsyncSession, tenant_id: uuid.UUID, user_id: uu
     return opportunity
 
 
+# async def update_opportunity(
+#     db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, opportunity_id: uuid.UUID, data: OpportunityUpdate
+# ) -> Opportunity | None:
+#     opportunity = await get_opportunity(db, tenant_id, opportunity_id)
+#     if opportunity is None:
+#         return None
+
+#     update_data = data.model_dump(exclude_unset=True)
+
+#     if "stage" in update_data and "probability_pct" not in update_data:
+#         update_data["probability_pct"] = STAGE_PROBABILITY_MAP.get(update_data["stage"], opportunity.probability_pct)
+
+#     for field, value in update_data.items():
+#         setattr(opportunity, field, value)
+#     opportunity.modified_by = user_id
+
+#     await db.commit()
+#     await db.refresh(opportunity)
+#     return opportunity
 async def update_opportunity(
     db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, opportunity_id: uuid.UUID, data: OpportunityUpdate
 ) -> Opportunity | None:
@@ -124,6 +144,17 @@ async def update_opportunity(
     if "stage" in update_data and "probability_pct" not in update_data:
         update_data["probability_pct"] = STAGE_PROBABILITY_MAP.get(update_data["stage"], opportunity.probability_pct)
 
+    # XPO-47: Status Change Notification
+    if "stage" in update_data and update_data["stage"] != opportunity.stage:
+        await create_notification(
+            db, tenant_id, opportunity.assigned_to_id,
+            title=f"Opportunity stage changed: {opportunity.opportunity_name}",
+            message=f"Stage changed to {update_data['stage']}",
+            notification_type="opportunity_stage_changed",
+            related_to="Opportunity",
+            related_record_id=opportunity.id,
+        )
+
     for field, value in update_data.items():
         setattr(opportunity, field, value)
     opportunity.modified_by = user_id
@@ -131,7 +162,6 @@ async def update_opportunity(
     await db.commit()
     await db.refresh(opportunity)
     return opportunity
-
 
 async def delete_opportunity(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, opportunity_id: uuid.UUID) -> Opportunity | None:
     opportunity = await get_opportunity(db, tenant_id, opportunity_id)

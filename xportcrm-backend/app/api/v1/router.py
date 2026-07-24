@@ -39,6 +39,10 @@ from app.api.v1.endpoints import opportunity
 from app.api.v1.endpoints import quotation
 from app.api.v1.endpoints import activity
 from app.api.v1.endpoints import role
+from app.api.v1.endpoints import super_admin
+from app.api.v1.endpoints import notification
+from app.api.v1.endpoints import dashboard
+from app.api.v1.endpoints import document
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -66,3 +70,7 @@ api_router.include_router(opportunity.router, prefix="/opportunities", tags=["Op
 api_router.include_router(quotation.router, prefix="/quotations", tags=["Quotations"])
 api_router.include_router(activity.router, prefix="/activities", tags=["Activities"])
 api_router.include_router(role.router, prefix="/roles", tags=["Role Management"])
+api_router.include_router(super_admin.router, prefix="/super-admin", tags=["Super Admin"])
+api_router.include_router(notification.router, prefix="/notifications", tags=["Notifications"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(document.router, prefix="/documents", tags=["Documents"])

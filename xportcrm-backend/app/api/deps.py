@@ -8,6 +8,7 @@ from app.core.security import decode_access_token
 from app.schemas.auth import CurrentUser
 from app.db.session import get_db
 from app.services.permission_service import has_permission
+from app.schemas.super_admin import SuperAdminCurrentUser
 
 bearer_scheme = HTTPBearer()
 
@@ -49,3 +50,21 @@ def require_permission(module: str, action: str):
         return current_user
 
     return checker
+
+
+def get_current_super_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> SuperAdminCurrentUser:
+    token = credentials.credentials
+    try:
+        payload = decode_access_token(token)
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+
+    if payload.get("scope") != "super_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required")
+
+    return SuperAdminCurrentUser(
+        super_admin_id=uuid.UUID(payload["sub"]),
+        email=payload["email"],
+    )
