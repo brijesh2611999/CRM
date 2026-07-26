@@ -43,6 +43,7 @@ from app.api.v1.endpoints import super_admin
 from app.api.v1.endpoints import notification
 from app.api.v1.endpoints import dashboard
 from app.api.v1.endpoints import document
+from app.api.v1.endpoints import user
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -74,3 +75,4 @@ api_router.include_router(super_admin.router, prefix="/super-admin", tags=["Supe
 api_router.include_router(notification.router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(document.router, prefix="/documents", tags=["Documents"])
+api_router.include_router(user.router, prefix="/users", tags=["Users"])

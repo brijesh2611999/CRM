@@ -61,9 +61,17 @@ async def bulk_delete_leads(
 @router.get("/export/csv")
 async def export_leads_csv(
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items, _ = await lead_service.list_leads(db, tenant_id, page=1, page_size=100000)
+    items, _ = await lead_service.list_leads(
+        db=db,
+        tenant_id=tenant_id,
+        current_user_id=current_user.user_id,
+        data_scope=current_user.data_scope,
+        page=1,
+        page_size=100000
+    )
     rows = serialize_for_export(items)
     return export_to_csv(rows, "leads_export")
 
@@ -71,9 +79,17 @@ async def export_leads_csv(
 @router.get("/export/excel")
 async def export_leads_excel(
     tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items, _ = await lead_service.list_leads(db, tenant_id, page=1, page_size=100000)
+    items, _ = await lead_service.list_leads(
+        db=db,
+        tenant_id=tenant_id,
+        current_user_id=current_user.user_id,
+        data_scope=current_user.data_scope,
+        page=1,
+        page_size=100000
+    )
     rows = serialize_for_export(items)
     return export_to_excel(rows, "leads_export")
 
