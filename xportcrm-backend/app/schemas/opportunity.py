@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 # Stage -> Probability auto-suggestion map, per XPO-47 spec table
 STAGE_PROBABILITY_MAP = {
     "Discovery": 10,
-    "Quote Sent": 30,
+    "Quote": 30,
     "Proposal": 50,
     "Negotiation": 70,
     "Closed Won": 100,
@@ -64,6 +64,8 @@ class OpportunityUpdate(BaseModel):
 class OpportunityRead(OpportunityBase):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
+    account_name: str | None = None
+    contact_name: str | None = None
     last_activity_date: datetime | None = None
     quote_count: int
     created_at: datetime

@@ -11,6 +11,7 @@ from app.schemas.quotation import (
 from app.services import quotation_service
 from app.api.deps import get_current_tenant_id, get_current_user_id, require_permission
 from app.services.field_permission_service import get_field_visibility_map, apply_field_visibility
+from app.services.export_service import export_to_csv, export_to_excel, serialize_for_export
 from app.api.deps import get_current_user
 from app.schemas.auth import CurrentUser
 
@@ -23,6 +24,26 @@ async def list_quotations(
     db: AsyncSession = Depends(get_db),
 ):
     return await quotation_service.list_quotations(db, tenant_id)
+
+
+@router.get("/export/csv")
+async def export_quotations_csv(
+    tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    items = await quotation_service.list_quotations(db, tenant_id)
+    rows = serialize_for_export(items)
+    return export_to_csv(rows, "quotations_export")
+
+
+@router.get("/export/excel")
+async def export_quotations_excel(
+    tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    items = await quotation_service.list_quotations(db, tenant_id)
+    rows = serialize_for_export(items)
+    return export_to_excel(rows, "quotations_export")
 
 
 # @router.post("/", response_model=QuotationRead, status_code=201)

@@ -64,13 +64,13 @@ async def list_accounts(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    accounts = await account_service.list_accounts(db, current_user.tenant_id)
+    items, total = await account_service.list_accounts(db, current_user.tenant_id, page=1, page_size=10000)
     visibility_map = await get_field_visibility_map(db, current_user.tenant_id, current_user.role_id, "accounts")
     if not visibility_map:
-        return accounts
+        return items
     # Apply field hiding (credit_limit, annual_revenue_potential, etc.)
     filtered = []
-    for acc in accounts:
+    for acc in items:
         acc_dict = AccountRead.model_validate(acc).model_dump()
         filtered.append(apply_field_visibility(acc_dict, visibility_map))
     return filtered

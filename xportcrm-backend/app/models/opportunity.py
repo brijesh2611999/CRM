@@ -3,7 +3,7 @@ import uuid
 
 from sqlalchemy import String, Text, Numeric, Integer, DateTime, Date, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.mixins import UUIDPKMixin, TenantMixin, AuditMixin, SoftDeleteMixin
@@ -23,6 +23,17 @@ class Opportunity(Base, UUIDPKMixin, TenantMixin, AuditMixin, SoftDeleteMixin):
     contact_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("contacts.id"), nullable=True
     )
+
+    account: Mapped["Account"] = relationship("Account", backref="opportunities", lazy="selectin")
+    contact: Mapped["Contact"] = relationship("Contact", backref="opportunities", lazy="selectin")
+
+    @property
+    def account_name(self) -> str | None:
+        return self.account.name if self.account else None
+
+    @property
+    def contact_name(self) -> str | None:
+        return self.contact.contact_name if self.contact else None
 
     opportunity_type: Mapped[str] = mapped_column(String(30), nullable=False)
     # Air / Ocean FCL / Ocean LCL / Transport / Customs / Integrated

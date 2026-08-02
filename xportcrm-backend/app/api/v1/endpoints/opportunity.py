@@ -47,20 +47,24 @@ async def bulk_delete_opportunities(
 
 @router.get("/export/csv")
 async def export_opportunities_csv(
-    tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items, _ = await opportunity_service.list_opportunities(db, tenant_id, page=1, page_size=100000)
+    items, _ = await opportunity_service.list_opportunities(
+        db, current_user.tenant_id, current_user.user_id, current_user.data_scope, page=1, page_size=100000
+    )
     rows = serialize_for_export(items)
     return export_to_csv(rows, "opportunities_export")
 
 
 @router.get("/export/excel")
 async def export_opportunities_excel(
-    tenant_id: uuid.UUID = Depends(get_current_tenant_id),
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items, _ = await opportunity_service.list_opportunities(db, tenant_id, page=1, page_size=100000)
+    items, _ = await opportunity_service.list_opportunities(
+        db, current_user.tenant_id, current_user.user_id, current_user.data_scope, page=1, page_size=100000
+    )
     rows = serialize_for_export(items)
     return export_to_excel(rows, "opportunities_export")
 

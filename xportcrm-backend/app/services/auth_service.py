@@ -26,9 +26,33 @@ async def signup_tenant(db: AsyncSession, data: TenantSignup) -> str:
         data_scope="All",  # Tenant Admin sees everything
     )
     db.add(admin_role)
+
+    default_roles_info = [
+        ("Sales Manager", "SALES_MANAGER", "Team"),
+        ("Sales Executive", "SALES_EXECUTIVE", "Own"),
+        ("Finance", "FINANCE", "All"),
+        ("Customer Portal", "CUSTOMER_PORTAL", "Own"),
+    ]
+
+    roles_to_seed = [(admin_role, "TENANT_ADMIN")]
+
+    for r_name, r_code, r_scope in default_roles_info:
+        r = Role(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name=r_name,
+            code=r_code,
+            is_system_role=True,
+            is_active=True,
+            data_scope=r_scope,
+        )
+        db.add(r)
+        roles_to_seed.append((r, r_code))
+
     await db.flush()
 
-    await seed_default_permissions(db, tenant.id, admin_role.id, "TENANT_ADMIN")
+    for role_obj, role_code in roles_to_seed:
+        await seed_default_permissions(db, tenant.id, role_obj.id, role_code)
 
     user = User(
         id=uuid.uuid4(),

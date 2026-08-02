@@ -54,3 +54,8 @@ class FieldPermissionItem(BaseModel):
 
 class SetFieldPermissionsRequest(BaseModel):
     field_permissions: list[FieldPermissionItem]
+
+
+class FieldPermissionRead(FieldPermissionItem):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID

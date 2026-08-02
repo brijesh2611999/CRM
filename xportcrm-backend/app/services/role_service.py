@@ -19,16 +19,27 @@ def _generate_role_code(name: str) -> str:
 
 
 async def list_roles(db: AsyncSession, tenant_id: uuid.UUID) -> list[Role]:
-    result = await db.execute(select(Role).where(Role.tenant_id == tenant_id))
+    from sqlalchemy import or_
+    result = await db.execute(
+        select(Role).where(
+            or_(Role.tenant_id == tenant_id, Role.tenant_id.is_(None))
+        )
+    )
     return result.scalars().all()
 
 
 async def get_role(db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID) -> Role | None:
-    result = await db.execute(select(Role).where(Role.id == role_id, Role.tenant_id == tenant_id))
+    from sqlalchemy import or_
+    result = await db.execute(
+        select(Role).where(
+            Role.id == role_id,
+            or_(Role.tenant_id == tenant_id, Role.tenant_id.is_(None))
+        )
+    )
     return result.scalar_one_or_none()
 
 
-async def create_role(db: AsyncSession, tenant_id: uuid.UUID, data: RoleCreate) -> Role:
+async def create_role(db: AsyncSession, tenant_id: uuid.UUID | None, data: RoleCreate, is_system: bool = False) -> Role:
     """XPO-41 AC-01: Tenant Admin can create unlimited custom roles.
     New custom roles start with NO permissions (all modules/actions
     denied) - admin must explicitly grant permissions afterward via
@@ -37,7 +48,7 @@ async def create_role(db: AsyncSession, tenant_id: uuid.UUID, data: RoleCreate) 
         tenant_id=tenant_id,
         name=data.name,
         code=_generate_role_code(data.name),
-        is_system_role=False,
+        is_system_role=is_system,
         is_active=data.is_active,
     )
     db.add(role)
@@ -46,11 +57,11 @@ async def create_role(db: AsyncSession, tenant_id: uuid.UUID, data: RoleCreate) 
     return role
 
 
-async def update_role(db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID, data: RoleUpdate) -> Role | None:
+async def update_role(db: AsyncSession, tenant_id: uuid.UUID | None, role_id: uuid.UUID, data: RoleUpdate, is_super_admin: bool = False) -> Role | None:
     role = await get_role(db, tenant_id, role_id)
     if role is None:
         return None
-    if role.is_system_role:
+    if role.is_system_role and not is_super_admin:
         raise HTTPException(status_code=400, detail="System roles cannot be modified")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(role, field, value)
@@ -59,11 +70,11 @@ async def update_role(db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID
     return role
 
 
-async def delete_role(db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID) -> Role | None:
+async def delete_role(db: AsyncSession, tenant_id: uuid.UUID | None, role_id: uuid.UUID, is_super_admin: bool = False) -> Role | None:
     role = await get_role(db, tenant_id, role_id)
     if role is None:
         return None
-    if role.is_system_role:
+    if role.is_system_role and not is_super_admin:
         raise HTTPException(status_code=400, detail="System roles cannot be deleted")
     role.is_active = False
     await db.commit()
@@ -104,21 +115,27 @@ async def clone_role(db: AsyncSession, tenant_id: uuid.UUID, source_role_id: uui
     return new_role
 
 
-async def get_permissions(db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID) -> list[Permission]:
+async def get_permissions(db: AsyncSession, tenant_id: uuid.UUID | None, role_id: uuid.UUID) -> list[Permission]:
+    from sqlalchemy import or_
     result = await db.execute(
-        select(Permission).where(Permission.tenant_id == tenant_id, Permission.role_id == role_id)
+        select(Permission).where(
+            Permission.role_id == role_id,
+            or_(Permission.tenant_id == tenant_id, Permission.tenant_id.is_(None))
+        )
     )
     return result.scalars().all()
 
 
 async def set_permissions(
-    db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID, permissions: list[PermissionItem]
+    db: AsyncSession, tenant_id: uuid.UUID | None, role_id: uuid.UUID, permissions: list[PermissionItem], is_super_admin: bool = False
 ) -> list[Permission]:
     """Upserts permission rows for a role - for each (module, action)
     pair given, create it if missing or update 'allowed' if it exists."""
     role = await get_role(db, tenant_id, role_id)
     if role is None:
         raise HTTPException(status_code=404, detail="Role not found")
+    if role.is_system_role and not is_super_admin:
+        raise HTTPException(status_code=400, detail="System role permissions cannot be modified")
 
     for item in permissions:
         result = await db.execute(
@@ -162,11 +179,13 @@ async def assign_user_to_role(db: AsyncSession, tenant_id: uuid.UUID, user_id: u
 
 
 async def set_field_permissions(
-    db: AsyncSession, tenant_id: uuid.UUID, role_id: uuid.UUID, field_permissions: list[FieldPermissionItem]
+    db: AsyncSession, tenant_id: uuid.UUID | None, role_id: uuid.UUID, field_permissions: list[FieldPermissionItem], is_super_admin: bool = False
 ) -> list[FieldPermission]:
     role = await get_role(db, tenant_id, role_id)
     if role is None:
         raise HTTPException(status_code=404, detail="Role not found")
+    if role.is_system_role and not is_super_admin:
+        raise HTTPException(status_code=400, detail="System role permissions cannot be modified")
 
     for item in field_permissions:
         result = await db.execute(

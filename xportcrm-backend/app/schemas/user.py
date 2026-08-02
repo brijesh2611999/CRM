@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class UserBase(BaseModel):
     full_name: str
     email: EmailStr
-    is_active: bool
+    is_active: bool = True
 
 class UserRead(UserBase):
     id: uuid.UUID
@@ -15,3 +15,7 @@ class UserRead(UserBase):
     modified_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserCreate(UserBase):
+    password: str
+    role_id: uuid.UUID

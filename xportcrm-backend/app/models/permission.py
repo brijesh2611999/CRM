@@ -7,13 +7,16 @@ from app.db.base import Base
 from app.models.mixins import UUIDPKMixin, TenantMixin
 
 
-class Permission(Base, UUIDPKMixin, TenantMixin):
+class Permission(Base, UUIDPKMixin):
     """XPO-41 Permission Matrix: one row per (Role, Module, Action).
     Example: role_id=<Sales Exec>, module='Leads', action='create',
     allowed=True."""
 
     __tablename__ = "permissions"
 
+    tenant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True, index=True
+    )
     role_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("roles.id"), nullable=False, index=True
     )
